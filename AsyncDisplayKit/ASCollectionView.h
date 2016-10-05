@@ -307,14 +307,26 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)moveItemAtIndexPath:(NSIndexPath *)indexPath toIndexPath:(NSIndexPath *)newIndexPath;
 
 /**
- * Similar to -cellForItemAtIndexPath:.
+ * Retrieves the node for the item at the given index path, in the data source's index space.
  *
  * @param indexPath The index path of the requested node.
- *
- * @return a node for display at this indexpath or nil
+ * @return The node at the given index path, or @c nil if no item exists at the specified path.
  */
 - (nullable ASCellNode *)nodeForItemAtIndexPath:(NSIndexPath *)indexPath AS_WARN_UNUSED_RESULT;
 
+/**
+ * Retrieves the node for the item at the given index path.
+ *
+ * @param indexPath The index path of the requested node.
+ * @param useUIKitIndexSpace Whether the index path provided is in the UIKit index space or not.
+ *
+ * @discussion You should use the UIKit index space only when dealing directly with UIKit
+ *    e.g. when implementing a @c UICollectionViewLayout subclass, or when implementing
+ *    @c collectionView:didSelectItemAtIndexPath: .
+ *
+ * @return The node at the given index path, or @c nil if no item exists at the specified path.
+ */
+- (nullable ASCellNode *)nodeForItemAtIndexPath:(NSIndexPath *)indexPath usingUIKitIndexSpace:(BOOL)useUIKitIndexSpace AS_WARN_UNUSED_RESULT;
 
 /**
  * Similar to -supplementaryViewForElementKind:atIndexPath:
@@ -329,11 +341,16 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * Similar to -indexPathForCell:.
  *
- * @param cellNode a cellNode part of the table view
+ * @param cellNode a cellNode in the collection view
  *
- * @return an indexPath for this cellNode
+ * @return The index path for this cell node, in the data source's index space.
+ *
+ * @discussion This method will return @c nil for a node that is still being
+ *   displayed in the collection view, if the data source has deleted the item.
+ *   That is, the node is visible but it no longer corresponds
+ *   to any item in the data source and will be removed soon.
  */
-- (NSIndexPath *)indexPathForNode:(ASCellNode *)cellNode AS_WARN_UNUSED_RESULT;
+- (nullable NSIndexPath *)indexPathForNode:(ASCellNode *)cellNode AS_WARN_UNUSED_RESULT;
 
 /**
  * Similar to -visibleCells.
@@ -341,13 +358,6 @@ NS_ASSUME_NONNULL_BEGIN
  * @return an array containing the nodes being displayed on screen.
  */
 - (NSArray<__kindof ASCellNode *> *)visibleNodes AS_WARN_UNUSED_RESULT;
-
-/**
- * Query the sized node at `indexPath` for its calculatedSize.
- *
- * @param indexPath The index path for the node of interest.
- */
-- (CGSize)calculatedSizeForNodeAtIndexPath:(NSIndexPath *)indexPath AS_WARN_UNUSED_RESULT;
 
 /**
  * Determines collection view's current scroll direction. Supports 2-axis collection views.
@@ -386,6 +396,19 @@ NS_ASSUME_NONNULL_BEGIN
  * its flow layout behaves predictably and does not log undefined layout warnings.
  */
 @property (nonatomic) BOOL zeroContentInsets;
+
+@end
+
+@interface ASCollectionView (Deprecated)
+
+/**
+ * Query the sized node at `indexPath` for its calculatedSize.
+ *
+ * @param indexPath The index path for the node of interest.
+ *
+ * @deprecated Call @c calculatedSize on the node of interest instead. First deprecated in version 2.0.
+ */
+- (CGSize)calculatedSizeForNodeAtIndexPath:(NSIndexPath *)indexPath ASDISPLAYNODE_DEPRECATED;
 
 @end
 
@@ -479,18 +502,13 @@ NS_ASSUME_NONNULL_BEGIN
 - (ASSizeRange)collectionView:(ASCollectionView *)collectionView constrainedSizeForNodeAtIndexPath:(NSIndexPath *)indexPath;
 
 /**
- * Informs the delegate that the collection view will add the given node
- * at the given index path to the view hierarchy.
+ * Informs the delegate that the collection view will
+ * add the given node to the view hierarchy.
  *
  * @param collectionView The sender.
  * @param node The node that will be displayed.
- * @param indexPath The index path of the item that will be displayed.
- *
- * @warning AsyncDisplayKit processes collection view edits asynchronously. The index path
- *   passed into this method may not correspond to the same item in your data source
- *   if your data source has been updated since the last edit was processed.
  */
-- (void)collectionView:(ASCollectionView *)collectionView willDisplayNode:(ASCellNode *)node forItemAtIndexPath:(NSIndexPath *)indexPath;
+- (void)collectionView:(ASCollectionView *)collectionView willDisplayNode:(ASCellNode *)node;
 
 /**
  * Informs the delegate that the collection view did remove the provided node from the view hierarchy.
@@ -499,13 +517,8 @@ NS_ASSUME_NONNULL_BEGIN
  * 
  * @param collectionView The sender.
  * @param node The node which was removed from the view hierarchy.
- * @param indexPath The index path at which the node was located before it was removed.
- *
- * @warning AsyncDisplayKit processes collection view edits asynchronously. The index path
- *   passed into this method may not correspond to the same item in your data source
- *   if your data source has been updated since the last edit was processed.
  */
-- (void)collectionView:(ASCollectionView *)collectionView didEndDisplayingNode:(ASCellNode *)node forItemAtIndexPath:(NSIndexPath *)indexPath;
+- (void)collectionView:(ASCollectionView *)collectionView didEndDisplayingNode:(ASCellNode *)node;
 
 /**
  * Receive a message that the collectionView is near the end of its data set and more data should be fetched if 
@@ -546,9 +559,42 @@ NS_ASSUME_NONNULL_BEGIN
  *   passed into this method may not correspond to the same item in your data source
  *   if your data source has been updated since the last edit was processed.
  *
- * This method is deprecated. Use @c collectionView:willDisplayNode:forItemAtIndexPath: instead.
+ * This method is deprecated. Use @c collectionView:willDisplayNode: and @c indexPathForNode: instead.
  */
 - (void)collectionView:(ASCollectionView *)collectionView willDisplayNodeForItemAtIndexPath:(NSIndexPath *)indexPath ASDISPLAYNODE_DEPRECATED;
+
+/**
+ * Informs the delegate that the collection view will add the given node
+ * at the given index path to the view hierarchy.
+ *
+ * @param collectionView The sender.
+ * @param node The node that will be displayed.
+ * @param indexPath The index path of the item that will be displayed.
+ *
+ * @warning AsyncDisplayKit processes collection view edits asynchronously. The index path
+ *   passed into this method may not correspond to the same item in your data source
+ *   if your data source has been updated since the last edit was processed.
+ *
+ * This method is deprecated. Use @c collectionView:willDisplayNode: and @c indexPathForNode: or @c UIKitIndexPathForNode: instead.
+ */
+- (void)collectionView:(ASCollectionView *)collectionView willDisplayNode:(ASCellNode *)node forItemAtIndexPath:(NSIndexPath *)indexPath ASDISPLAYNODE_DEPRECATED;
+
+/**
+ * Informs the delegate that the collection view did remove the provided node from the view hierarchy.
+ * This may be caused by the node scrolling out of view, or by deleting the item
+ * or its containing section with @c deleteItemsAtIndexPaths: or @c deleteSections: .
+ *
+ * @param collectionView The sender.
+ * @param node The node which was removed from the view hierarchy.
+ * @param indexPath The index path at which the node was located before it was removed.
+ *
+ * @warning AsyncDisplayKit processes collection view edits asynchronously. The index path
+ *   passed into this method may not correspond to the same item in your data source
+ *   if your data source has been updated since the last edit was processed.
+ *
+ * This method is deprecated. Use @c collectionView:didEndDisplayingNode: and @c indexPathForNode:
+ */
+- (void)collectionView:(ASCollectionView *)collectionView didEndDisplayingNode:(ASCellNode *)node forItemAtIndexPath:(NSIndexPath *)indexPath ASDISPLAYNODE_DEPRECATED;
 
 @end
 

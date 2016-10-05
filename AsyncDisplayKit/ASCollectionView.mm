@@ -161,8 +161,10 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
     unsigned int asyncDelegateScrollViewWillBeginDragging:1;
     unsigned int asyncDelegateScrollViewDidEndDragging:1;
     unsigned int asyncDelegateScrollViewWillEndDraggingWithVelocityTargetContentOffset:1;
+    unsigned int asyncDelegateCollectionViewWillDisplayNode:1;
     unsigned int asyncDelegateCollectionViewWillDisplayNodeForItemAtIndexPath:1;
     unsigned int asyncDelegateCollectionViewWillDisplayNodeForItemAtIndexPathDeprecated:1;
+    unsigned int asyncDelegateCollectionViewDidEndDisplayingNode:1;
     unsigned int asyncDelegateCollectionViewDidEndDisplayingNodeForItemAtIndexPath:1;
     unsigned int asyncDelegateCollectionViewWillBeginBatchFetchWithContext:1;
     unsigned int asyncDelegateShouldBatchFetchForCollectionView:1;
@@ -400,11 +402,17 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
     
     _asyncDelegateFlags.asyncDelegateScrollViewDidScroll = [_asyncDelegate respondsToSelector:@selector(scrollViewDidScroll:)];
     _asyncDelegateFlags.asyncDelegateScrollViewWillEndDraggingWithVelocityTargetContentOffset = [_asyncDelegate respondsToSelector:@selector(scrollViewWillEndDragging:withVelocity:targetContentOffset:)];
-    _asyncDelegateFlags.asyncDelegateCollectionViewWillDisplayNodeForItemAtIndexPath = [_asyncDelegate respondsToSelector:@selector(collectionView:willDisplayNode:forItemAtIndexPath:)];
-    if (_asyncDelegateFlags.asyncDelegateCollectionViewWillDisplayNodeForItemAtIndexPath == NO) {
-      _asyncDelegateFlags.asyncDelegateCollectionViewWillDisplayNodeForItemAtIndexPathDeprecated = [_asyncDelegate respondsToSelector:@selector(collectionView:willDisplayNodeForItemAtIndexPath:)];
+    _asyncDelegateFlags.asyncDelegateCollectionViewWillDisplayNode = [_asyncDelegate respondsToSelector:@selector(collectionView:willDisplayNode:)];
+    if (_asyncDelegateFlags.asyncDelegateCollectionViewWillDisplayNode == NO) {
+      _asyncDelegateFlags.asyncDelegateCollectionViewWillDisplayNodeForItemAtIndexPath = [_asyncDelegate respondsToSelector:@selector(collectionView:willDisplayNode:forItemAtIndexPath:)];
+      if (_asyncDelegateFlags.asyncDelegateCollectionViewWillDisplayNodeForItemAtIndexPath == NO) {
+        _asyncDelegateFlags.asyncDelegateCollectionViewWillDisplayNodeForItemAtIndexPathDeprecated = [_asyncDelegate respondsToSelector:@selector(collectionView:willDisplayNodeForItemAtIndexPath:)];
+      }
     }
-    _asyncDelegateFlags.asyncDelegateCollectionViewDidEndDisplayingNodeForItemAtIndexPath = [_asyncDelegate respondsToSelector:@selector(collectionView:didEndDisplayingNode:forItemAtIndexPath:)];
+    _asyncDelegateFlags.asyncDelegateCollectionViewDidEndDisplayingNode = [_asyncDelegate respondsToSelector:@selector(collectionView:didEndDisplayingNode:)];
+    if (_asyncDelegateFlags.asyncDelegateCollectionViewDidEndDisplayingNode == NO) {
+      _asyncDelegateFlags.asyncDelegateCollectionViewDidEndDisplayingNodeForItemAtIndexPath = [_asyncDelegate respondsToSelector:@selector(collectionView:didEndDisplayingNode:forItemAtIndexPath:)];
+    }
     _asyncDelegateFlags.asyncDelegateCollectionViewWillBeginBatchFetchWithContext = [_asyncDelegate respondsToSelector:@selector(collectionView:willBeginBatchFetchWithContext:)];
     _asyncDelegateFlags.asyncDelegateShouldBatchFetchForCollectionView = [_asyncDelegate respondsToSelector:@selector(shouldBatchFetchForCollectionView:)];
     _asyncDelegateFlags.asyncDelegateScrollViewWillBeginDragging = [_asyncDelegate respondsToSelector:@selector(scrollViewWillBeginDragging:)];
@@ -488,7 +496,16 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
 
 - (ASCellNode *)nodeForItemAtIndexPath:(NSIndexPath *)indexPath
 {
-  return [_dataController nodeAtIndexPath:indexPath];
+  return [self nodeForItemAtIndexPath:indexPath usingUIKitIndexSpace:NO];
+}
+
+- (ASCellNode *)nodeForItemAtIndexPath:(NSIndexPath *)indexPath usingUIKitIndexSpace:(BOOL)useUIKitIndexSpace
+{
+  if (useUIKitIndexSpace) {
+    return [_dataController nodeAtCompletedIndexPath:indexPath];
+  } else {
+    return [_dataController nodeAtIndexPath:indexPath];
+  }
 }
 
 - (ASCellNode *)supplementaryNodeForElementKind:(NSString *)elementKind atIndexPath:(NSIndexPath *)indexPath
@@ -661,7 +678,7 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
 
 - (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath
 {
-  return [[_dataController nodeAtIndexPath:indexPath] calculatedSize];
+  return [[_dataController nodeAtCompletedIndexPath:indexPath] calculatedSize];
 }
 
 - (UICollectionReusableView *)collectionView:(UICollectionView *)collectionView viewForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath
@@ -680,7 +697,7 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
 {
   _ASCollectionViewCell *cell = [self dequeueReusableCellWithReuseIdentifier:kCellReuseIdentifier forIndexPath:indexPath];
   
-  ASCellNode *node = [_dataController nodeAtIndexPath:indexPath];
+  ASCellNode *node = [_dataController nodeAtCompletedIndexPath:indexPath];
   cell.node = node;
   [_rangeController configureContentView:cell.contentView forCellNode:node];
   
@@ -709,10 +726,12 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
 
   ASDisplayNodeAssertNotNil(cellNode, @"Expected node associated with cell that will be displayed not to be nil. indexPath: %@", indexPath);
 
-  if (_asyncDelegateFlags.asyncDelegateCollectionViewWillDisplayNodeForItemAtIndexPath) {
-    [_asyncDelegate collectionView:self willDisplayNode:cellNode forItemAtIndexPath:indexPath];
+  if (_asyncDelegateFlags.asyncDelegateCollectionViewWillDisplayNode) {
+    [_asyncDelegate collectionView:self willDisplayNode:cellNode];
+  } else if (_asyncDelegateFlags.asyncDelegateCollectionViewWillDisplayNodeForItemAtIndexPath) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    [_asyncDelegate collectionView:self willDisplayNode:cellNode forItemAtIndexPath:indexPath];
   } else if (_asyncDelegateFlags.asyncDelegateCollectionViewWillDisplayNodeForItemAtIndexPathDeprecated) {
     [_asyncDelegate collectionView:self willDisplayNodeForItemAtIndexPath:indexPath];
   }
@@ -728,12 +747,17 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
 - (void)collectionView:(UICollectionView *)collectionView didEndDisplayingCell:(_ASCollectionViewCell *)cell forItemAtIndexPath:(NSIndexPath *)indexPath
 {
   ASCellNode *cellNode = [cell node];
+  ASDisplayNodeAssertNotNil(cellNode, @"Expected node associated with removed cell not to be nil.");
 
-  if (_asyncDelegateFlags.asyncDelegateCollectionViewDidEndDisplayingNodeForItemAtIndexPath) {
-    ASDisplayNodeAssertNotNil(cellNode, @"Expected node associated with removed cell not to be nil.");
+  if (_asyncDelegateFlags.asyncDelegateCollectionViewDidEndDisplayingNode) {
+    [_asyncDelegate collectionView:self didEndDisplayingNode:cellNode];
+  } else if (_asyncDelegateFlags.asyncDelegateCollectionViewDidEndDisplayingNodeForItemAtIndexPath) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [_asyncDelegate collectionView:self didEndDisplayingNode:cellNode forItemAtIndexPath:indexPath];
   }
-  
+#pragma clang diagnostic pop
+
   [_rangeController setNeedsUpdate];
   
   [_cellsForVisibilityUpdates removeObject:cell];
@@ -1031,6 +1055,7 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
   return node;
 }
 
+// TODO: Lock this
 - (NSArray *)supplementaryNodeKindsInDataController:(ASCollectionDataController *)dataController
 {
   return [_registeredSupplementaryKinds allObjects];
@@ -1095,7 +1120,7 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
 
 - (ASDisplayNode *)rangeController:(ASRangeController *)rangeController nodeAtIndexPath:(NSIndexPath *)indexPath
 {
-  return [_dataController nodeAtIndexPath:indexPath];
+  return [_dataController nodeAtCompletedIndexPath:indexPath];
 }
 
 - (NSString *)nameForRangeControllerDataSource
@@ -1239,19 +1264,19 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
 #pragma mark - ASCellNodeDelegate
 - (void)nodeSelectedStateDidChange:(ASCellNode *)node
 {
-  NSIndexPath *indexPath = [self indexPathForNode:node];
+  NSIndexPath *indexPath = [_dataController completedIndexPathForNode:node];
   if (indexPath) {
     if (node.isSelected) {
-      [self selectItemAtIndexPath:indexPath animated:NO scrollPosition:UICollectionViewScrollPositionNone];
+      [super selectItemAtIndexPath:indexPath animated:NO scrollPosition:UICollectionViewScrollPositionNone];
     } else {
-      [self deselectItemAtIndexPath:indexPath animated:NO];
+      [super deselectItemAtIndexPath:indexPath animated:NO];
     }
   }
 }
 
 - (void)nodeHighlightedStateDidChange:(ASCellNode *)node
 {
-  NSIndexPath *indexPath = [self indexPathForNode:node];
+  NSIndexPath *indexPath = [_dataController completedIndexPathForNode:node];
   if (indexPath) {
     [self cellForItemAtIndexPath:indexPath].highlighted = node.isHighlighted;
   }
@@ -1265,12 +1290,12 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
     return;
   }
   
-  NSIndexPath *indexPath = [self indexPathForNode:node];
-  if (indexPath == nil) {
+  NSIndexPath *uikitIndexPath = [_dataController completedIndexPathForNode:node];
+  if (uikitIndexPath == nil) {
     return;
   }
 
-  [_layoutFacilitator collectionViewWillEditCellsAtIndexPaths:@[ indexPath ] batched:NO];
+  [_layoutFacilitator collectionViewWillEditCellsAtIndexPaths:@[ uikitIndexPath ] batched:NO];
   
   ASCollectionViewInvalidationStyle invalidationStyle = _nextLayoutInvalidationStyle;
   if (invalidationStyle == ASCollectionViewInvalidationStyleNone) {

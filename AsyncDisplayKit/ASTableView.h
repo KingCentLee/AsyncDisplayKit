@@ -272,13 +272,25 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)moveRowAtIndexPath:(NSIndexPath *)indexPath toIndexPath:(NSIndexPath *)newIndexPath;
 
 /**
- * Similar to -cellForRowAtIndexPath:.
- * 
- * @param indexPath The index path of the requested node.
+ * Retrieves the node for the row at the given index path, in the data source's index space.
  *
- * @return a node for display at this indexpath.
+ * @param indexPath The index path of the requested row, in the data source's index space.
+ * @return The node for the row, or @c nil if no row exists at the specified path.
  */
-- (ASCellNode *)nodeForRowAtIndexPath:(NSIndexPath *)indexPath AS_WARN_UNUSED_RESULT;
+- (nullable ASCellNode *)nodeForRowAtIndexPath:(NSIndexPath *)indexPath AS_WARN_UNUSED_RESULT;
+
+/**
+ * Retrieves the node for the row at the given index path.
+ *
+ * @param indexPath The index path of the requested row.
+ * @param useUIKitIndexSpace Whether the index path provided is in the UIKit index space or not.
+ *
+ * @discussion You should use the UIKit index space only if the index path was received from UIKit
+ *    e.g. @c tableView:didSelectRowAtIndexPath: or @c tableView:canMoveRowAtIndexPath: .
+ *
+ * @return The node for the row, or @c nil if no row exists at the specified path.
+ */
+- (nullable ASCellNode *)nodeForRowAtIndexPath:(NSIndexPath *)indexPath usingUIKitIndexSpace:(BOOL)useUIKitIndexSpace AS_WARN_UNUSED_RESULT;
 
 /**
  * Similar to -indexPathForCell:.
@@ -286,6 +298,11 @@ NS_ASSUME_NONNULL_BEGIN
  * @param cellNode a cellNode part of the table view
  *
  * @return an indexPath for this cellNode
+ *
+ * @discussion This method will return @c nil for a node that is still being
+ *   displayed in the table view, if the data source has deleted the row.
+ *   That is, the node is visible but it no longer corresponds
+ *   to any item in the data source and will be removed soon.
  */
 - (nullable NSIndexPath *)indexPathForNode:(ASCellNode *)cellNode AS_WARN_UNUSED_RESULT;
 
@@ -392,18 +409,13 @@ NS_ASSUME_NONNULL_BEGIN
 @optional
 
 /**
- * Informs the delegate that the table view will add the given node
- * at the given index path to the view hierarchy.
+ * Informs the delegate that the table view will
+ * add the given node to the view hierarchy.
  *
  * @param tableView The sender.
  * @param node The node that will be displayed.
- * @param indexPath The index path of the row that will be displayed.
- *
- * @warning AsyncDisplayKit processes table view edits asynchronously. The index path
- *   passed into this method may not correspond to the same item in your data source
- *   if your data source has been updated since the last edit was processed.
  */
-- (void)tableView:(ASTableView *)tableView willDisplayNode:(ASCellNode *)node forRowAtIndexPath:(NSIndexPath *)indexPath;
+- (void)tableView:(ASTableView *)tableView willDisplayNode:(ASCellNode *)node;
 
 /**
  * Informs the delegate that the table view did remove the provided node from the view hierarchy.
@@ -412,13 +424,8 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @param tableView The sender.
  * @param node The node which was removed from the view hierarchy.
- * @param indexPath The index path at which the node was located before the removal.
- *
- * @warning AsyncDisplayKit processes table view edits asynchronously. The index path
- *   passed into this method may not correspond to the same item in your data source
- *   if your data source has been updated since the last edit was processed.
  */
-- (void)tableView:(ASTableView *)tableView didEndDisplayingNode:(ASCellNode *)node forRowAtIndexPath:(NSIndexPath *)indexPath;
+- (void)tableView:(ASTableView *)tableView didEndDisplayingNode:(ASCellNode *)node;
 
 /**
  * Receive a message that the tableView is near the end of its data set and more data should be fetched if necessary.
@@ -470,9 +477,42 @@ NS_ASSUME_NONNULL_BEGIN
  *   passed into this method may not correspond to the same item in your data source
  *   if your data source has been updated since the last edit was processed.
  *
- * This method is deprecated. Use @c tableView:willDisplayNode:forRowAtIndexPath: instead.
+ * This method is deprecated. Use @c tableView:willDisplayNode: and @c indexPathForNode: instead.
  */
 - (void)tableView:(ASTableView *)tableView willDisplayNodeForRowAtIndexPath:(NSIndexPath *)indexPath ASDISPLAYNODE_DEPRECATED;
+
+/**
+ * Informs the delegate that the table view will add the given node
+ * at the given index path to the view hierarchy.
+ *
+ * @param tableView The sender.
+ * @param node The node that will be displayed.
+ * @param indexPath The index path of the row that will be displayed.
+ *
+ * @warning AsyncDisplayKit processes table view edits asynchronously. The index path
+ *   passed into this method may not correspond to the same item in your data source
+ *   if your data source has been updated since the last edit was processed.
+ *
+ * This method is deprecated. Use @c tableView:willDisplayNode: and @c indexPathForNode: instead.
+ */
+- (void)tableView:(ASTableView *)tableView willDisplayNode:(ASCellNode *)node forRowAtIndexPath:(NSIndexPath *)indexPath ASDISPLAYNODE_DEPRECATED;
+
+/**
+ * Informs the delegate that the table view did remove the provided node from the view hierarchy.
+ * This may be caused by the node scrolling out of view, or by deleting the row
+ * or its containing section with @c deleteRowsAtIndexPaths:withRowAnimation: or @c deleteSections:withRowAnimation: .
+ *
+ * @param tableView The sender.
+ * @param node The node which was removed from the view hierarchy.
+ * @param indexPath The index path at which the node was located before the removal.
+ *
+ * @warning AsyncDisplayKit processes table view edits asynchronously. The index path
+ *   passed into this method may not correspond to the same item in your data source
+ *   if your data source has been updated since the last edit was processed.
+ *
+ * @This method is deprecated. Use @c tableView:willDisplayNode: and @c indexPathForNode: instead.
+ */
+- (void)tableView:(ASTableView *)tableView didEndDisplayingNode:(ASCellNode *)node forRowAtIndexPath:(NSIndexPath *)indexPath ASDISPLAYNODE_DEPRECATED;
 
 @end
 
