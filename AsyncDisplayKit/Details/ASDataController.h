@@ -181,6 +181,10 @@ FOUNDATION_EXPORT NSString * const ASDataControllerRowNodeKind;
 
 - (nullable ASCellNode *)nodeAtIndexPath:(NSIndexPath *)indexPath;
 
+- (NSUInteger)completedNumberOfSections;
+
+- (NSUInteger)completedNumberOfRowsInSection:(NSUInteger)section;
+
 - (nullable ASCellNode *)nodeAtCompletedIndexPath:(NSIndexPath *)indexPath;
 
 /**

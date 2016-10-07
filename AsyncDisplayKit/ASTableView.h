@@ -293,6 +293,16 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable ASCellNode *)nodeForRowAtIndexPath:(NSIndexPath *)indexPath usingUIKitIndexSpace:(BOOL)useUIKitIndexSpace AS_WARN_UNUSED_RESULT;
 
 /**
+ * TODO: Docs
+ */
+- (NSInteger)asyncNumberOfRowsInSection:(NSInteger)section AS_WARN_UNUSED_RESULT;
+
+/**
+ * TODO: Docs
+ */
+@property (nonatomic, readonly) NSInteger asyncNumberOfSections;
+
+/**
  * Similar to -indexPathForCell:.
  *
  * @param cellNode a cellNode part of the table view
@@ -465,6 +475,56 @@ NS_ASSUME_NONNULL_BEGIN
  * @return A constrained size range for layout the node at this index path.
  */
 - (ASSizeRange)tableView:(ASTableView *)tableView constrainedSizeForRowAtIndexPath:(NSIndexPath *)indexPath AS_WARN_UNUSED_RESULT;
+
+/**
+ * TODO: Docs
+ */
+- (void)tableView:(ASTableView *)tableView willSelectNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (void)tableView:(ASTableView *)tableView didSelectNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (void)tableView:(ASTableView *)tableView willDeselectNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (void)tableView:(ASTableView *)tableView didDeselectNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (BOOL)tableView:(ASTableView *)tableView shouldHighlightNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (void)tableView:(ASTableView *)tableView didHighlightNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (void)tableView:(ASTableView *)tableView didUnhighlightNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (BOOL)tableView:(ASTableView *)tableView shouldShowMenuForNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (BOOL)tableView:(ASTableView *)tableView canPerformAction:(nonnull SEL)action forNode:(ASCellNode *)node withSender:(nullable id)sender;
+
+/**
+ * TODO: Docs
+ */
+- (void)tableView:(ASTableView *)tableView performAction:(nonnull SEL)action forNode:(ASCellNode *)node withSender:(nullable id)sender;
 
 /**
  * Informs the delegate that the table view will add the node

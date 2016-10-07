@@ -329,6 +329,16 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable ASCellNode *)nodeForItemAtIndexPath:(NSIndexPath *)indexPath usingUIKitIndexSpace:(BOOL)useUIKitIndexSpace AS_WARN_UNUSED_RESULT;
 
 /**
+ * TODO: Docs
+ */
+- (NSInteger)asyncNumberOfItemsInSection:(NSInteger)section AS_WARN_UNUSED_RESULT;
+
+/**
+ * TODO: Docs
+ */
+@property (nonatomic, readonly) NSInteger asyncNumberOfSections;
+
+/**
  * Similar to -supplementaryViewForElementKind:atIndexPath:
  *
  * @param elementKind The kind of supplementary node to locate.
@@ -509,6 +519,56 @@ NS_ASSUME_NONNULL_BEGIN
  * @param node The node that will be displayed.
  */
 - (void)collectionView:(ASCollectionView *)collectionView willDisplayNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (BOOL)collectionView:(ASCollectionView *)collectionView shouldSelectNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (void)collectionView:(ASCollectionView *)collectionView didSelectNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (BOOL)collectionView:(ASCollectionView *)collectionView shouldDeselectNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (void)collectionView:(ASCollectionView *)collectionView didDeselectNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (BOOL)collectionView:(ASCollectionView *)collectionView shouldHighlightNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (void)collectionView:(ASCollectionView *)collectionView didHighlightNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (void)collectionView:(ASCollectionView *)collectionView didUnhighlightNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (BOOL)collectionView:(ASCollectionView *)collectionView shouldShowMenuForNode:(ASCellNode *)node;
+
+/**
+ * TODO: Docs
+ */
+- (BOOL)collectionView:(ASCollectionView *)collectionView canPerformAction:(SEL)action forNode:(ASCellNode *)node withSender:(nullable id)sender;
+
+/**
+ * TODO: Docs
+ */
+- (void)collectionView:(ASCollectionView *)collectionView performAction:(SEL)action forNode:(ASCellNode *)node withSender:(nullable id)sender;
 
 /**
  * Informs the delegate that the collection view did remove the provided node from the view hierarchy.
